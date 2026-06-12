@@ -1,0 +1,195 @@
+@import "tailwindcss";
+
+/* ================================================================
+   EVENTFUL - global CSS
+   Design tokens inlined from the Eventful design system.
+   Tailwind @theme gets static values; :root carries var() aliases.
+================================================================= */
+
+@theme inline {
+  --color-paper:    #FBF5EF;
+  --color-cream:    #F2D9C9;
+  --color-blush:    #DCA9C3;
+  --color-lilac:    #A885B8;
+  --color-heather:  #6E5A93;
+  --color-plum:     #3A3266;
+  --color-ink:      #211733;
+
+  --color-surface:  #FFFFFF;
+  --color-brand:    #3A3266;
+  --color-accent:   #A885B8;
+  --color-highlight: #DCA9C3;
+
+  --color-success:  #4D8B6F;
+  --color-danger:   #C44D63;
+  --color-warning:  #C7893C;
+  --color-info:     #5E6FA8;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'DM Sans', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* ----------------------------------------------------------------
+   Core ramp
+---------------------------------------------------------------- */
+:root {
+  --paper:    #FBF5EF;
+  --cream:    #F2D9C9;
+  --blush:    #DCA9C3;
+  --lilac:    #A885B8;
+  --heather:  #6E5A93;
+  --plum:     #3A3266;
+  --ink:      #211733;
+
+  --paper-2:    #F4EBE1;
+  --cream-tint: #FBEDE4;
+  --plum-tint:  #E7E3F0;
+  --plum-2:     #2C2651;
+  --ink-2:      #160F24;
+
+  --void:   #161020;
+  --dusk:   #241A33;
+  --dusk-2: #312446;
+  --dusk-3: #3D2E55;
+  --moon:   #C4BBF0;
+  --rose:   #F0AFC6;
+  --pearl:  #FFECEF;
+
+  /* Semantic - always design against these */
+  --bg-page:      var(--paper);
+  --bg-sunken:    var(--paper-2);
+  --surface:      #FFFFFF;
+  --surface-tint: var(--cream-tint);
+
+  --text-strong:    var(--ink);
+  --text-body:      #34294A;
+  --text-muted:     var(--heather);
+  --text-subtle:    #94879F;
+  --text-on-brand:  var(--paper);
+  --text-on-cream:  var(--ink);
+
+  --border:        #E7DED6;
+  --border-strong: var(--ink);
+  --border-soft:   #EFE7E0;
+
+  --brand:       var(--plum);
+  --brand-hover: #443B73;
+  --brand-press: var(--plum-2);
+  --brand-soft:  var(--plum-tint);
+  --accent:      var(--lilac);
+  --highlight:   var(--blush);
+
+  --focus-ring: #8C73C9;
+  --overlay:    rgba(33, 23, 51, 0.55);
+
+  --glow-plum:  rgba(58, 50, 102, 0.16);
+  --glow-blush: rgba(220, 169, 195, 0.22);
+
+  /* Status */
+  --success:    #4D8B6F; --success-bg: #E4F0EA; --success-bd: #BFE0D0;
+  --danger:     #C44D63; --danger-bg:  #F7E3E7; --danger-bd:  #ECC2CB;
+  --warning:    #C7893C; --warning-bg: #F8EEDD; --warning-bd: #ECD3AC;
+  --info:       #5E6FA8; --info-bg:    #E6E9F4; --info-bd:    #C5CCE4;
+
+  /* Typography */
+  --font-body:    'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'DM Sans', 'Inter', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+  --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --fw-bold: 700;    --fw-extrabold: 800;
+
+  --fs-display: clamp(2.75rem, 1.6rem + 5.4vw, 5.5rem);
+  --fs-h1:      clamp(2.1rem, 1.4rem + 3vw, 3.5rem);
+  --fs-h2:      clamp(1.6rem, 1.2rem + 1.8vw, 2.5rem);
+  --fs-h3:      1.5rem;
+  --fs-h4:      1.25rem;
+  --fs-title:   1.125rem;    /* 18px */
+  --fs-body-lg: 1.0625rem;   /* 17px */
+  --fs-body:    1rem;        /* 16px - minimum readable body size */
+  --fs-sm:      0.875rem;    /* 14px - captions, meta, labels */
+  --fs-xs:      0.6875rem;   /* 11px - mono eyebrow labels ONLY */
+
+  --lh-tight: 1.02; --lh-snug: 1.15; --lh-normal: 1.5; --lh-relaxed: 1.65;
+  --ls-display: -0.035em; --ls-tight: -0.02em;
+  --ls-label: 0.08em;    --ls-wide: 0.14em;
+
+  /* Spacing (8pt scale) */
+  --space-1: 0.25rem; --space-2: 0.5rem;  --space-3: 0.75rem;
+  --space-4: 1rem;    --space-5: 1.5rem;  --space-6: 2rem;
+  --space-7: 2.5rem;  --space-8: 3rem;    --space-9: 4rem;
+  --space-10: 5rem;   --space-11: 7rem;
+
+  /* Radii */
+  --radius-xs: 6px;  --radius-sm: 10px; --radius-md: 14px;
+  --radius-lg: 20px; --radius-xl: 28px; --radius-2xl: 36px;
+  --radius-pill: 999px;
+
+  --bw-hair: 1px; --bw-edge: 2px;
+  --container: 1200px;
+  --gutter: clamp(1.25rem, 0.5rem + 3vw, 3.5rem);
+
+  /* Motion */
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 0.12s; --dur-base: 0.225s; --dur-slow: 0.35s;
+
+  /* Shadows */
+  --shadow-edge: var(--ink);
+  --stack-1:     2px 2px 0 var(--shadow-edge);
+  --stack-1-lg:  3px 3px 0 var(--shadow-edge);
+  --stack-2:     3px 3px 0 var(--lilac), 6px 6px 0 var(--shadow-edge);
+  --stack-2-lg:  4px 4px 0 var(--lilac), 8px 8px 0 var(--shadow-edge);
+  --stack-2-blush: 3px 3px 0 var(--blush), 6px 6px 0 var(--shadow-edge);
+  --stack-2-cream: 3px 3px 0 var(--cream), 6px 6px 0 var(--shadow-edge);
+
+  /* Secondary button theming, flipped in dark mode */
+  --btn-secondary-bg:    var(--surface);
+  --btn-secondary-color: var(--text-strong);
+  --btn-secondary-bd:    var(--border-strong);
+  --btn-secondary-acc:   var(--blush);
+  --ring: 0 0 0 3px var(--brand-soft), 0 0 0 4px var(--focus-ring);
+  --shadow-card: 0 3px 10px rgba(33,23,51,0.07);
+  --shadow-card-hover: 0 5px 16px rgba(33,23,51,0.11);
+  --shadow-md: 0 6px 18px rgba(33,23,51,0.10);
+  --shadow-lg: 0 16px 40px rgba(33,23,51,0.14);
+}
+
+[data-theme="dark"] {
+  --bg-page:     var(--void);
+  --bg-sunken:   #110C19;
+  --surface:     var(--dusk);
+  --surface-tint: #2A1E3D;
+
+  --text-strong: var(--pearl);
+  --text-body:   #ECE2EC;
+  --text-muted:  #B3A6C8;
+  --text-subtle: #7C6E92;
+  --text-on-brand: var(--ink);
+
+  --border:        rgba(196,187,240,0.14);
+  --border-strong: var(--moon);
+
+  --brand:       var(--moon);
+  --brand-hover: #D3CCF4;
+  --brand-press: #B0A6E6;
+  --brand-soft:  rgba(196,187,240,0.12);
+  --accent:      var(--rose);
+
+  /* Dark mode shadow inversion: the hard offset edge flips from ink to a
+     light tone so elements look like they float on the dark surface.
+     ALL stacks (--stack-1, --stack-2, button/picker shadows...) derive from
+     --shadow-edge, so this ONE variable is the place to retheme the outer
+     shadow layer in dark mode. The inner accent layer stays lilac via the
+     --stack-2* definitions in :root above. */
+  --shadow-edge: var(--paper);
+
+  /* Secondary button in dark mode: purplish fill, ink edge,
+     lilac-to-cream shadow stack (same hover mechanics as light). */
+  --btn-secondary-bg:    var(--dusk-3);
+  --btn-secondary-color: var(--moon);
+  --btn-secondary-bd:    var(--ink);
+  --btn-secondary-acc:   var(--lilac);
+}
+
