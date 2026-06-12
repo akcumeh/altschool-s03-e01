@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
+import Footer from "@/components/Footer";
 import { AuthProvider } from "@/lib/auth";
 import { ToastProvider } from "@/lib/toast";
 
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ToastProvider>
             <NavBar />
             <main>{children}</main>
+            <Footer />
           </ToastProvider>
         </AuthProvider>
       </body>
