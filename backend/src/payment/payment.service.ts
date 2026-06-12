@@ -25,7 +25,11 @@ export class PaymentService {
         private notifications: NotificationsService,
     ) {}
 
-    async initializePayment(eventId: string, eventeeId: string) {
+    async initializePayment(
+        eventId: string,
+        eventeeId: string,
+        buyer?: { email?: string; name?: string },
+    ) {
         const { data: ticket } = await this.supabase.db
             .from('tickets')
             .select(
@@ -46,13 +50,19 @@ export class PaymentService {
 
         const reference = `EVT-${ticket.id}-${Date.now()}`;
 
+        const frontendUrl = this.config.get('FRONTEND_URL', 'http://localhost:3001');
+
         const { data: response } = await axios.post(
             `${this.paystackBase}/transaction/initialize`,
             {
-                email: user.email,
+                email: buyer?.email || user.email,
                 amount: amountKobo,
                 reference,
-                metadata: { ticket_id: ticket.id },
+                callback_url: `${frontendUrl}/payment/success`,
+                metadata: {
+                    ticket_id: ticket.id,
+                    ...(buyer?.name ? { buyer_name: buyer.name } : {}),
+                },
             },
             {
                 headers: {
@@ -73,7 +83,7 @@ export class PaymentService {
         };
     }
 
-    async verifyPayment(eventId: string, eventeeId: string, reference: string) {
+    async verifyPayment(eventeeId: string, reference: string) {
         let verifyRes: any;
         try {
             const response = await axios.get(
@@ -110,6 +120,7 @@ export class PaymentService {
             reference,
             amountPaid,
             qrCode,
+            paidAt: verifyRes.data.paid_at ?? verifyRes.data.paidAt ?? null,
         });
 
         const eventData = updated.events as any;
@@ -162,6 +173,7 @@ export class PaymentService {
             reference,
             amountPaid,
             qrCode,
+            paidAt: payload.data.paid_at ?? payload.data.paidAt ?? null,
         });
 
         const eventData = updated.events as any;

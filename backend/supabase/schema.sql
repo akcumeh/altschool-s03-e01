@@ -47,5 +47,7 @@ create table tickets (
 create table reminder_logs (
     id uuid primary key default uuid_generate_v4(),
     ticket_id uuid not null references tickets(id) on delete cascade,
+    -- 'creator' = organiser-scheduled reminder, 'eventee' = personal reminder
+    source text not null default 'creator',
     sent_at timestamptz default now()
 );

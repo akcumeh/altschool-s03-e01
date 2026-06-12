@@ -32,18 +32,33 @@ export class EventsService {
     }
 
     async findAll() {
-        const cached = await this.cache.get(EVENTS_CACHE_KEY);
-        if (cached) return cached;
+        let events = await this.cache.get<any[]>(EVENTS_CACHE_KEY);
+        if (!events) {
+            const { data, error } = await this.supabase.db
+                .from('events')
+                .select('*')
+                .eq('status', 'published')
+                .order('starts_at', { ascending: true });
+            if (error) throw error;
+            await this.cache.set(EVENTS_CACHE_KEY, data);
+            events = data;
+        }
 
-        const { data, error } = await this.supabase.db
-            .from('events')
-            .select('*')
-            .eq('status', 'published')
-            .order('starts_at', { ascending: true });
-        if (error) throw error;
+        // Always fetch fresh ticket counts — tickets change independently of the event cache
+        const { data: soldRows } = await this.supabase.db
+            .from('tickets')
+            .select('event_id')
+            .eq('status', 'paid');
 
-        await this.cache.set(EVENTS_CACHE_KEY, data);
-        return data;
+        const countMap: Record<string, number> = {};
+        soldRows?.forEach((r: { event_id: string }) => {
+            countMap[r.event_id] = (countMap[r.event_id] ?? 0) + 1;
+        });
+
+        return (events ?? []).map((e: any) => ({
+            ...e,
+            tickets_sold: countMap[e.id] ?? 0,
+        }));
     }
 
     async findMine(creatorId: string) {
@@ -63,7 +78,14 @@ export class EventsService {
             .eq('id', id)
             .single();
         if (error || !data) throw new NotFoundException('Event not found');
-        return data;
+
+        const { count: ticketsSold } = await this.supabase.db
+            .from('tickets')
+            .select('id', { count: 'exact', head: true })
+            .eq('event_id', id)
+            .eq('status', 'paid');
+
+        return { ...data, tickets_sold: ticketsSold ?? 0 };
     }
 
     async findByShareToken(token: string) {
@@ -80,13 +102,19 @@ export class EventsService {
         const event = await this.findOne(id);
         if (event.creator_id !== userId) throw new ForbiddenException();
 
-        if (Object.keys(dto).length === 0) {
+        // class-transformer adds all class fields as undefined own properties;
+        // filter to only the fields the caller actually provided.
+        const updates = Object.fromEntries(
+            Object.entries(dto).filter(([, v]) => v !== undefined),
+        ) as UpdateEventDto;
+
+        if (Object.keys(updates).length === 0) {
             throw new BadRequestException('Request body cannot be empty');
         }
 
-        if (dto.starts_at !== undefined || dto.ends_at !== undefined) {
-            const effectiveStartsAt = dto.starts_at ?? (event.starts_at as string);
-            const effectiveEndsAt = dto.ends_at ?? (event.ends_at as string | null);
+        if (updates.starts_at !== undefined || updates.ends_at !== undefined) {
+            const effectiveStartsAt = updates.starts_at ?? (event.starts_at as string);
+            const effectiveEndsAt = updates.ends_at ?? (event.ends_at as string | null);
 
             if (effectiveEndsAt && new Date(effectiveEndsAt) <= new Date(effectiveStartsAt)) {
                 throw new BadRequestException('ends_at must be after starts_at');
@@ -95,12 +123,27 @@ export class EventsService {
 
         const { data, error } = await this.supabase.db
             .from('events')
-            .update(dto)
+            .update(updates)
             .eq('id', id)
             .select()
             .single();
         if (error) throw error;
         await this.cache.del(EVENTS_CACHE_KEY);
+        return data;
+    }
+
+    async findAttendees(eventId: string, creatorId: string) {
+        const event = await this.findOne(eventId);
+        if (event.creator_id !== creatorId) throw new ForbiddenException();
+
+        const { data, error } = await this.supabase.db
+            .from('tickets')
+            .select(
+                'id, status, amount_paid, paid_at, created_at, eventful_users(id, name, email)',
+            )
+            .eq('event_id', eventId)
+            .order('created_at', { ascending: false });
+        if (error) throw error;
         return data;
     }
 

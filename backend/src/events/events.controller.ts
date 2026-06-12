@@ -44,6 +44,13 @@ export class EventsController {
         return this.events.findByShareToken(token);
     }
 
+    @Get(':id/attendees')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('creator')
+    findAttendees(@Param('id') id: string, @CurrentUser() user: any) {
+        return this.events.findAttendees(id, user.id);
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.events.findOne(id);

@@ -16,6 +16,11 @@ export class AnalyticsController {
         return this.analytics.getOverview(user.id);
     }
 
+    @Get('events')
+    getEventsBreakdown(@CurrentUser() user: any) {
+        return this.analytics.getEventsBreakdown(user.id);
+    }
+
     @Get('events/:eventId')
     getEventStats(@Param('eventId') eventId: string, @CurrentUser() user: any) {
         return this.analytics.getEventStats(eventId, user.id);

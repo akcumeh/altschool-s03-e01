@@ -1,12 +1,21 @@
 import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service';
 
 @Controller()
 export class AppController {
-    constructor(private readonly appService: AppService) {}
+    private readonly startedAt = new Date().toISOString();
 
     @Get()
-    getHello(): string {
-        return this.appService.getHello();
+    healthRoot() {
+        return this.health();
+    }
+
+    @Get('health')
+    health() {
+        return {
+            status: 'ok',
+            uptime: Math.floor(process.uptime()),
+            started_at: this.startedAt,
+            timestamp: new Date().toISOString(),
+        };
     }
 }

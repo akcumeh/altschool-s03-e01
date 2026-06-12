@@ -57,7 +57,10 @@ describe('NotificationsService - reminder idempotency', () => {
         await service.sendScheduledReminders();
 
         expect(sendEmailSpy).toHaveBeenCalledTimes(1);
-        expect(insertMock).toHaveBeenCalledWith({ ticket_id: 'ticket-1' });
+        expect(insertMock).toHaveBeenCalledWith({
+            ticket_id: 'ticket-1',
+            source: 'creator',
+        });
     });
 
     it('does not send if rpc returns empty list', async () => {

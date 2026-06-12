@@ -8,7 +8,7 @@ import {
     Req,
     UseGuards,
 } from '@nestjs/common';
-import { IsString } from 'class-validator';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -20,6 +20,16 @@ class VerifyPaymentDto {
     reference: string;
 }
 
+class InitPaymentDto {
+    @IsOptional()
+    @IsEmail()
+    email?: string;
+
+    @IsOptional()
+    @IsString()
+    name?: string;
+}
+
 @Controller()
 export class PaymentController {
     constructor(private payment: PaymentService) {}
@@ -29,9 +39,10 @@ export class PaymentController {
     @Roles('eventee')
     initializePayment(
         @Param('eventId') eventId: string,
+        @Body() dto: InitPaymentDto,
         @CurrentUser() user: any,
     ) {
-        return this.payment.initializePayment(eventId, user.id);
+        return this.payment.initializePayment(eventId, user.id, dto);
     }
 
     @Post('tickets/:eventId/verify')
@@ -42,7 +53,17 @@ export class PaymentController {
         @Body() dto: VerifyPaymentDto,
         @CurrentUser() user: any,
     ) {
-        return this.payment.verifyPayment(eventId, user.id, dto.reference);
+        return this.payment.verifyPayment(user.id, dto.reference);
+    }
+
+    @Post('payment/verify')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('eventee')
+    verifyByReference(
+        @Body() dto: VerifyPaymentDto,
+        @CurrentUser() user: any,
+    ) {
+        return this.payment.verifyPayment(user.id, dto.reference);
     }
 
     @Post('payment/webhook')

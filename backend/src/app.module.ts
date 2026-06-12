@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -14,6 +15,7 @@ import { TicketsModule } from './tickets/tickets.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
+    controllers: [AppController],
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),

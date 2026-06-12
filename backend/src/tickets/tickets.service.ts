@@ -120,6 +120,7 @@ export class TicketsService {
         reference: string;
         amountPaid: number;
         qrCode: string;
+        paidAt?: string | null;
     }) {
         const { data, error } = await this.supabase.db
             .from('tickets')
@@ -128,7 +129,9 @@ export class TicketsService {
                 paystack_reference: opts.reference,
                 amount_paid: opts.amountPaid,
                 qr_code: opts.qrCode,
-                paid_at: new Date().toISOString(),
+                // Paystack reports when the charge actually succeeded; a late
+                // verification should not shift the payment time to "now".
+                paid_at: opts.paidAt ?? new Date().toISOString(),
             })
             .eq('id', opts.ticketId)
             .select('*, events(title, starts_at, location), eventful_users(name, email)')
