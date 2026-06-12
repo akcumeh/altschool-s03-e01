@@ -3,6 +3,7 @@ import { DM_Sans, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
 import { AuthProvider } from "@/lib/auth";
+import { ToastProvider } from "@/lib/toast";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -51,8 +52,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AuthProvider>
-          <NavBar />
-          <main>{children}</main>
+          <ToastProvider>
+            <NavBar />
+            <main>{children}</main>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

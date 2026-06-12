@@ -6,7 +6,10 @@ import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import { type Event, apiCreateTicket, apiInitPayment } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
+import { validateEmail, validateName } from "@/lib/validators";
 import Button from "@/components/Button";
+import Input from "@/components/Input";
 
 /* ---- Brand gradients (deterministic per event id) ---- */
 const BRAND_GRADIENTS = [
@@ -35,8 +38,8 @@ interface Props { event: Event }
 export default function EventDetail({ event }: Props) {
   const { user } = useAuth();
   const router = useRouter();
-  const [step, setStep] = useState<"idle" | "loading" | "error">("idle");
-  const [errMsg, setErrMsg] = useState("");
+  const toast = useToast();
+  const [showBuy, setShowBuy] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const heroBg = gradient(event.id);
@@ -49,35 +52,11 @@ export default function EventDetail({ event }: Props) {
   const isSoldOut = event.capacity != null && spotsLeft === 0;
   const isAlmostFull = event.capacity != null && spotsLeft != null && spotsLeft > 0
     && spotsLeft / event.capacity <= 0.1;
-
-  async function handleGetTickets() {
-    if (!user) { router.push("/auth/login"); return; }
-    setStep("loading");
-    setErrMsg("");
-    try {
-      await apiCreateTicket(event.id);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "";
-      if (!msg.toLowerCase().includes("already")) {
-        setStep("error");
-        setErrMsg(msg || "Could not reserve a ticket");
-        return;
-      }
-    }
-    try {
-      const { authorization_url } = await apiInitPayment(event.id);
-      localStorage.setItem("ev_pending_event", event.id);
-      window.location.href = authorization_url;
-    } catch (e: unknown) {
-      setStep("error");
-      setErrMsg(e instanceof Error ? e.message : "Could not initialize payment");
-    }
-  }
-
   function handleShare() {
     const url = `${window.location.origin}/events/share/${event.share_token}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
+      toast({ tone: "info", title: "Link copied", message: "Share it anywhere - the event is public." });
       setTimeout(() => setCopied(false), 2000);
     });
   }
@@ -219,21 +198,15 @@ export default function EventDetail({ event }: Props) {
             )}
           </div>
 
-          {errMsg && (
-            <div style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-bd)", borderRadius: 10, padding: "10px 14px", color: "var(--danger)", fontSize: "var(--fs-sm)", marginBottom: "var(--space-4)" }}>
-              {errMsg}
-            </div>
-          )}
-
           {isOwner ? (
             <p style={{ color: "var(--text-subtle)", fontSize: "var(--fs-sm)", textAlign: "center" }}>
               You created this event.{" "}
               <Link href="/dashboard" style={{ color: "var(--brand)", fontWeight: 600 }}>Manage it</Link>
             </p>
           ) : isEventee ? (
-            <Button size="lg" fullWidth onClick={handleGetTickets} disabled={step === "loading" || isSoldOut}>
+            <Button size="lg" fullWidth onClick={() => setShowBuy(true)} disabled={isSoldOut}>
               <Icon name="ticket" size={17} />
-              {step === "loading" ? "Hold on..." : isSoldOut ? "Sold out" : "Get tickets"}
+              {isSoldOut ? "Sold out" : "Get tickets"}
             </Button>
           ) : !user ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -253,6 +226,150 @@ export default function EventDetail({ event }: Props) {
         </div>
       </div>
 
+      {showBuy && user && (
+        <BuyTicketModal event={event} onClose={() => setShowBuy(false)} />
+      )}
+    </div>
+  );
+}
+
+/* ---- "Your details" checkout modal ----
+   Pre-filled from the account, editable before the pass is issued. */
+function BuyTicketModal({ event, onClose }: { event: Event; onClose: () => void }) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const toast = useToast();
+
+  const [name, setName] = useState(user?.name ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [nameErr, setNameErr] = useState<string | null>(null);
+  const [emailErr, setEmailErr] = useState<string | null>(null);
+  const [formErr, setFormErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const isFree = event.ticket_price === 0;
+
+  async function handlePay() {
+    const nErr = validateName(name);
+    const eErr = validateEmail(email);
+    setNameErr(nErr);
+    setEmailErr(eErr);
+    if (nErr || eErr) return;
+
+    setBusy(true);
+    setFormErr("");
+
+    // Register (create the pending ticket); tolerate "already registered"
+    try {
+      await apiCreateTicket(event.id);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "";
+      if (!msg.toLowerCase().includes("already")) {
+        setFormErr(msg || "Could not reserve a ticket");
+        setBusy(false);
+        return;
+      }
+    }
+
+    if (isFree) {
+      toast({ tone: "success", title: "You're registered!", message: "This event is free - see it on your dashboard." });
+      setBusy(false);
+      onClose();
+      router.push("/dashboard");
+      return;
+    }
+
+    try {
+      const { authorization_url } = await apiInitPayment(event.id, {
+        name: name.trim(),
+        email: email.trim(),
+      });
+      localStorage.setItem("ev_pending_event", event.id);
+      window.location.href = authorization_url;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Could not initialize payment";
+      if (msg.toLowerCase().includes("already paid")) {
+        toast({
+          tone: "info",
+          title: "You already have this ticket",
+          message: "Your QR pass is waiting on your tickets page.",
+          actionLabel: "View my tickets",
+          actionHref: "/tickets",
+        });
+        setBusy(false);
+        onClose();
+        return;
+      }
+      setFormErr(msg);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="ck-overlay" onClick={e => e.target === e.currentTarget && !busy && onClose()}>
+      <div className="ck-block" role="dialog" aria-label="Your details">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div className="ck-block__head">
+            <h2>Your details</h2>
+            <p className="ck-block__sub">Feel free to edit these details before we issue your ticket.</p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            disabled={busy}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}
+          >
+            <Icon name="x-mark" size={18} />
+          </button>
+        </div>
+
+        {formErr && (
+          <div style={{ background: "var(--danger-bg)", border: "1px solid var(--danger-bd)", borderRadius: 10, padding: "10px 14px", color: "var(--danger)", fontSize: "var(--fs-sm)", marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
+            <Icon name="exclamation-triangle" size={14} />{formErr}
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <Input
+            label="Full name"
+            value={name}
+            onChange={e => { setName(e.target.value); if (nameErr) setNameErr(validateName(e.target.value)); }}
+            onBlur={() => setNameErr(validateName(name))}
+            error={nameErr ?? undefined}
+            icon={<Icon name="user" size={16} />}
+            placeholder="Your full name"
+            required
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={email}
+            onChange={e => { setEmail(e.target.value); if (emailErr) setEmailErr(validateEmail(e.target.value)); }}
+            onBlur={() => setEmailErr(validateEmail(email))}
+            error={emailErr ?? undefined}
+            icon={<Icon name="envelope" size={16} />}
+            placeholder="you@email.com"
+            helper="Your QR pass and receipts go here."
+            required
+          />
+
+          {/* Order line */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingTop: 12, borderTop: "1px dashed var(--border-strong)" }}>
+            <span style={{ fontSize: "var(--fs-body)", color: "var(--text-muted)" }}>1 ticket / {event.title}</span>
+            <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: "var(--fs-h4)", color: "var(--brand)" }}>
+              {isFree ? "Free" : `NGN ${event.ticket_price.toLocaleString()}`}
+            </span>
+          </div>
+
+          <Button size="lg" fullWidth onClick={handlePay} disabled={busy}>
+            <Icon name="lock-closed" size={16} />
+            {busy ? "Hold on..." : isFree ? "Register free" : `Pay NGN ${event.ticket_price.toLocaleString()}`}
+          </Button>
+
+          <p className="ck-paystack">Secured by <b>Paystack</b> / QR ticket emailed instantly</p>
+          <div className="ck-trust"><Icon name="shield-check" size={15} /> Full refund up to 48h before the event</div>
+        </div>
+      </div>
     </div>
   );
 }
