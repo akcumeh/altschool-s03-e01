@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import { apiGetEvents, type Event } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { getSavedIds, toggleSaved } from "@/lib/saved";
+import { useToast } from "@/lib/toast";
 import Button from "@/components/Button";
 
 const CATEGORIES = ["All", "Concert", "Music", "Tech", "Comedy", "Art", "Cultural", "Sports", "Theatre"];
@@ -43,14 +45,31 @@ function price(n: number) {
 export default function HomePage() {
   const { user } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState("All");
+  const [savedIds, setSavedIds] = useState<string[]>([]);
 
   useEffect(() => {
     apiGetEvents().then(setEvents).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (user) setSavedIds(getSavedIds(user.id));
+  }, [user]);
+
+  function handleToggleSave(eventId: string) {
+    if (!user) { router.push("/auth/login"); return; }
+    const nowSaved = toggleSaved(user.id, eventId);
+    setSavedIds(getSavedIds(user.id));
+    toast({
+      tone: "info",
+      title: nowSaved ? "Event saved" : "Removed from saved",
+      message: nowSaved ? "Find it on your dashboard under Saved." : undefined,
+    });
+  }
 
   const filtered = events.filter(ev => {
     const matchCat = cat === "All" || (ev.category || "").toLowerCase() === cat.toLowerCase();
@@ -260,7 +279,16 @@ export default function HomePage() {
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24 }}>
-            {rest.map(ev => <EventCardItem key={ev.id} ev={ev} onClick={() => router.push(`/events/${ev.id}`)} />)}
+            {rest.map(ev => (
+              <EventCardItem
+                key={ev.id}
+                ev={ev}
+                onClick={() => router.push(`/events/${ev.id}`)}
+                saved={savedIds.includes(ev.id)}
+                canSave={!user || user.role === "eventee"}
+                onToggleSave={() => handleToggleSave(ev.id)}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -269,7 +297,19 @@ export default function HomePage() {
   );
 }
 
-function EventCardItem({ ev, onClick }: { ev: Event; onClick: () => void }) {
+function EventCardItem({
+  ev,
+  onClick,
+  saved,
+  canSave,
+  onToggleSave,
+}: {
+  ev: Event;
+  onClick: () => void;
+  saved: boolean;
+  canSave: boolean;
+  onToggleSave: () => void;
+}) {
   const ticketsSold = ev.tickets_sold ?? 0;
   const spotsLeft = ev.capacity ? Math.max(0, ev.capacity - ticketsSold) : null;
   const isSoldOut = ev.capacity != null && spotsLeft === 0;
@@ -309,6 +349,17 @@ function EventCardItem({ ev, onClick }: { ev: Event; onClick: () => void }) {
             fontSize: "var(--fs-xs)", fontFamily: "var(--font-mono)",
             color: "rgba(255,255,255,0.9)", letterSpacing: "0.08em", textTransform: "uppercase",
           }}>{ev.category}</span>
+        )}
+        {canSave && (
+          <button
+            onClick={e => { e.stopPropagation(); onToggleSave(); }}
+            className={"ev-save" + (saved ? " is-saved" : "")}
+            aria-label={saved ? "Remove from saved events" : "Save this event"}
+            title={saved ? "Remove from saved" : "Save for later"}
+            style={{ position: "absolute", bottom: 12, left: 12 }}
+          >
+            <Icon name={saved ? "heart-solid" : "heart"} size={16} />
+          </button>
         )}
       </div>
 

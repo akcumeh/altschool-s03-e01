@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import { type Event, apiCreateTicket, apiInitPayment } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
+import { isSaved, toggleSaved } from "@/lib/saved";
 import { validateEmail, validateName } from "@/lib/validators";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
@@ -41,6 +42,11 @@ export default function EventDetail({ event }: Props) {
   const toast = useToast();
   const [showBuy, setShowBuy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (user) setSaved(isSaved(user.id, event.id));
+  }, [user, event.id]);
 
   const heroBg = gradient(event.id);
   const isOwner = user?.id === event.creator_id;
@@ -52,12 +58,24 @@ export default function EventDetail({ event }: Props) {
   const isSoldOut = event.capacity != null && spotsLeft === 0;
   const isAlmostFull = event.capacity != null && spotsLeft != null && spotsLeft > 0
     && spotsLeft / event.capacity <= 0.1;
+
   function handleShare() {
     const url = `${window.location.origin}/events/share/${event.share_token}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       toast({ tone: "info", title: "Link copied", message: "Share it anywhere - the event is public." });
       setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  function handleSaveToggle() {
+    if (!user) { router.push("/auth/login"); return; }
+    const nowSaved = toggleSaved(user.id, event.id);
+    setSaved(nowSaved);
+    toast({
+      tone: "info",
+      title: nowSaved ? "Event saved" : "Removed from saved",
+      message: nowSaved ? "Find it on your dashboard under Saved." : undefined,
     });
   }
 
@@ -159,13 +177,25 @@ export default function EventDetail({ event }: Props) {
             ))}
           </div>
 
-          <button
-            onClick={handleShare}
-            style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: 999, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", fontSize: "var(--fs-sm)", cursor: "pointer", fontFamily: "var(--font-body)", touchAction: "manipulation", transition: "border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out)" }}
-          >
-            {copied ? <Icon name="check" size={14} style={{ color: "var(--success)" }} /> : <Icon name="share" size={14} />}
-            {copied ? "Link copied!" : "Share event"}
-          </button>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <button
+              onClick={handleShare}
+              style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: 999, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", fontSize: "var(--fs-sm)", cursor: "pointer", fontFamily: "var(--font-body)", touchAction: "manipulation", transition: "border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out)" }}
+            >
+              {copied ? <Icon name="check" size={14} style={{ color: "var(--success)" }} /> : <Icon name="share" size={14} />}
+              {copied ? "Link copied!" : "Share event"}
+            </button>
+            {!isOwner && (
+              <button
+                onClick={handleSaveToggle}
+                className={"ev-save" + (saved ? " is-saved" : "")}
+                aria-label={saved ? "Remove from saved events" : "Save this event"}
+                title={saved ? "Remove from saved" : "Save for later"}
+              >
+                <Icon name={saved ? "heart-solid" : "heart"} size={17} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Right: sticky ticket widget */}
