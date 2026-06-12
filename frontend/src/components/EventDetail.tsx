@@ -11,6 +11,7 @@ import { isSaved, toggleSaved } from "@/lib/saved";
 import { validateEmail, validateName } from "@/lib/validators";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import ShareModal from "@/components/ShareModal";
 
 /* ---- Brand gradients (deterministic per event id) ---- */
 const BRAND_GRADIENTS = [
@@ -41,7 +42,7 @@ export default function EventDetail({ event }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [showBuy, setShowBuy] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -59,14 +60,6 @@ export default function EventDetail({ event }: Props) {
   const isAlmostFull = event.capacity != null && spotsLeft != null && spotsLeft > 0
     && spotsLeft / event.capacity <= 0.1;
 
-  function handleShare() {
-    const url = `${window.location.origin}/events/share/${event.share_token}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      toast({ tone: "info", title: "Link copied", message: "Share it anywhere - the event is public." });
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
 
   function handleSaveToggle() {
     if (!user) { router.push("/auth/login"); return; }
@@ -179,11 +172,11 @@ export default function EventDetail({ event }: Props) {
 
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <button
-              onClick={handleShare}
+              onClick={() => setShowShare(true)}
               style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: 999, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", fontSize: "var(--fs-sm)", cursor: "pointer", fontFamily: "var(--font-body)", touchAction: "manipulation", transition: "border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out)" }}
             >
-              {copied ? <Icon name="check" size={14} style={{ color: "var(--success)" }} /> : <Icon name="share" size={14} />}
-              {copied ? "Link copied!" : "Share event"}
+              <Icon name="share" size={14} />
+              Share event
             </button>
             {!isOwner && (
               <button
@@ -258,6 +251,14 @@ export default function EventDetail({ event }: Props) {
 
       {showBuy && user && (
         <BuyTicketModal event={event} onClose={() => setShowBuy(false)} />
+      )}
+
+      {showShare && (
+        <ShareModal
+          eventTitle={event.title}
+          url={`${window.location.origin}/events/share/${event.share_token}`}
+          onClose={() => setShowShare(false)}
+        />
       )}
     </div>
   );

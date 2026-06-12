@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import ShareModal from "@/components/ShareModal";
 import DatePicker from "@/components/DatePicker";
 import TimePicker from "@/components/TimePicker";
 import {
@@ -17,6 +18,7 @@ import {
   type AnalyticsOverview, type Event, type EventBreakdownRow,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/lib/toast";
 import {
   validateAmount, validateInt, validateRequired,
 } from "@/lib/validators";
@@ -48,6 +50,7 @@ function rowStatus(row: EventBreakdownRow): RowStatus {
 export default function CreatorDashboard() {
   const { user } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [rows, setRows] = useState<EventBreakdownRow[]>([]);
@@ -55,6 +58,7 @@ export default function CreatorDashboard() {
   const [spotlightId, setSpotlightId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<EventBreakdownRow | null>(null);
+  const [shareTarget, setShareTarget] = useState<EventBreakdownRow | null>(null);
 
   const refresh = useCallback(() => {
     return Promise.all([apiGetAnalyticsOverview(), apiGetAnalyticsEvents()])
@@ -80,14 +84,10 @@ export default function CreatorDashboard() {
   const maxRevenue = useMemo(() => Math.max(1, ...rows.map(r => r.revenue)), [rows]);
 
 
-  function handleShare(row: EventBreakdownRow) {
-    const url = `${window.location.origin}/events/share/${row.share_token}`;
-    navigator.clipboard.writeText(url);
-  }
-
   async function handleDelete(row: EventBreakdownRow) {
     if (!confirm(`Delete "${row.title}"? This cannot be undone.`)) return;
     await apiDeleteEvent(row.id);
+    toast({ tone: "success", title: "Event deleted" });
     refresh();
   }
 
@@ -218,7 +218,7 @@ export default function CreatorDashboard() {
                         <td className="num" onClick={e => e.stopPropagation()}>
                           <div style={{ display: "inline-flex", gap: 6 }}>
                             <IconAction label="View event" icon="eye" onClick={() => router.push(`/events/${row.id}`)} />
-                            <IconAction label="Share event" icon="share" onClick={() => handleShare(row)} />
+                            <IconAction label="Share event" icon="share" onClick={() => setShareTarget(row)} />
                             <IconAction label="Edit event" icon="pencil-square" onClick={() => setEditTarget(row)} />
                             <IconAction label="Delete event" icon="trash" danger onClick={() => handleDelete(row)} />
                           </div>
@@ -326,6 +326,7 @@ export default function CreatorDashboard() {
           onClose={() => setShowCreate(false)}
           onSaved={() => {
             setShowCreate(false);
+            toast({ tone: "success", title: "Event published", message: "It is live and ready to share." });
             refresh();
           }}
         />
@@ -338,11 +339,19 @@ export default function CreatorDashboard() {
           onClose={() => setEditTarget(null)}
           onSaved={() => {
             setEditTarget(null);
+            toast({ tone: "success", title: "Changes saved" });
             refresh();
           }}
         />
       )}
 
+      {shareTarget && (
+        <ShareModal
+          eventTitle={shareTarget.title}
+          url={`${window.location.origin}/events/share/${shareTarget.share_token}`}
+          onClose={() => setShareTarget(null)}
+        />
+      )}
     </div>
   );
 }

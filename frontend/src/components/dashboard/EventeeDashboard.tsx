@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import Button from "@/components/Button";
+import ShareModal from "@/components/ShareModal";
 import {
   apiGetEvents, apiGetMyTickets, apiInitPayment, apiSetReminder, apiVerifyPayment,
   type Event, type Ticket,
@@ -57,6 +58,7 @@ export default function EventeeDashboard() {
   const [loading, setLoading] = useState(true);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState<Ticket | null>(null);
+  const [shareTarget, setShareTarget] = useState<Event | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -132,11 +134,11 @@ export default function EventeeDashboard() {
 
   function handleShare(eventId: string) {
     const ev = eventsById[eventId];
-    if (!ev) return;
-    const url = `${window.location.origin}/events/share/${ev.share_token}`;
-    navigator.clipboard.writeText(url).then(() =>
-      toast({ tone: "info", title: "Link copied", message: "Share it anywhere." }),
-    );
+    if (!ev) {
+      toast({ tone: "warning", title: "Cannot share", message: "This event is no longer published." });
+      return;
+    }
+    setShareTarget(ev);
   }
 
   if (loading) {
@@ -347,6 +349,14 @@ export default function EventeeDashboard() {
             </button>
           </div>
         </div>
+      )}
+
+      {shareTarget && (
+        <ShareModal
+          eventTitle={shareTarget.title}
+          url={`${window.location.origin}/events/share/${shareTarget.share_token}`}
+          onClose={() => setShareTarget(null)}
+        />
       )}
     </div>
   );
