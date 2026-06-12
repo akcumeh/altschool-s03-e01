@@ -507,6 +507,44 @@ a { color: inherit; text-decoration: none; }
 @keyframes ev-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* ----------------------------------------------------------------
+   Responsive overrides
+---------------------------------------------------------------- */
+@media (max-width: 768px) {
+  /* Auth split collapses to single column; hide brand panel */
+  [data-auth-split] { grid-template-columns: 1fr !important; }
+  [data-auth-brand] { display: none !important; }
+}
+
+@media (max-width: 640px) {
+  /* Auth pages: floating modal look on mobile ---- */
+  [data-auth-split] {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    background: var(--plum) !important;
+    padding: 40px 20px 60px !important;
+  }
+  [data-auth-form] {
+    display: block !important;
+    padding: 0 !important;
+    background: transparent !important;
+    width: 100%;
+    overflow-y: visible !important;
+  }
+  [data-auth-inner] {
+    background: var(--surface);
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius-xl);
+    box-shadow: 4px 4px 0 var(--lilac), 8px 8px 0 var(--shadow-edge);
+    padding: 28px 22px;
+    max-width: 460px !important;
+    margin: 0 auto;
+  }
+
+}
+
+/* ----------------------------------------------------------------
    Reduced motion
 ---------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
