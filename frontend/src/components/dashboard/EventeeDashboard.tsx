@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import Button from "@/components/Button";
 import ShareModal from "@/components/ShareModal";
+import ViewToggle, { type ViewMode } from "@/components/ViewToggle";
 import {
   apiGetEvents, apiGetMyTickets, apiInitPayment, apiSetReminder, apiVerifyPayment,
   type Event, type Ticket,
@@ -52,6 +53,7 @@ export default function EventeeDashboard() {
   const toast = useToast();
 
   const [tab, setTab] = useState<TabId>("saved");
+  const [view, setView] = useState<ViewMode>("grid");
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
@@ -176,7 +178,7 @@ export default function EventeeDashboard() {
           <div className="ea-stat"><div className="ea-stat__icon"><Icon name="bell-alert" size={20} /></div><span className="ea-stat__label">Reminders set</span><span className="ea-stat__value">{remindersSet}</span></div>
         </div>
 
-        <div className="db-tabs">
+        <div className="db-tabs" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
           <div className="ev-tabs" role="tablist">
             {tabs.map(t => (
               <button
@@ -191,16 +193,44 @@ export default function EventeeDashboard() {
               </button>
             ))}
           </div>
+          {tab !== "rem" && <ViewToggle view={view} onChange={setView} />}
         </div>
 
         <div className="db-panel">
           {tab === "saved" && (
             savedEvents.length === 0 ? (
               <div className="db-empty">No saved events yet. Tap the heart on any event to save it here.</div>
-            ) : (
+            ) : view === "grid" ? (
               <div className="db-grid">
                 {savedEvents.map(ev => (
                   <SavedCard key={ev.id} ev={ev} onOpen={() => router.push(`/events/${ev.id}`)} onUnsave={() => handleUnsave(ev.id)} />
+                ))}
+              </div>
+            ) : (
+              <div className="db-reg">
+                {savedEvents.map(ev => (
+                  <div className="db-regrow" key={ev.id}>
+                    <div className="db-datechip">
+                      <span className="m">{month(ev.starts_at)}</span>
+                      <span className="d">{day(ev.starts_at)}</span>
+                    </div>
+                    <div>
+                      <div className="db-reg__title">{ev.title}</div>
+                      <div className="db-reg__meta">
+                        <span><Icon name="calendar-days" size={14} />{fmtWhen(ev.starts_at)}</span>
+                        {ev.location && <span><Icon name="map-pin" size={14} />{ev.location}</span>}
+                        <span><Icon name="ticket" size={14} />{price(ev.ticket_price)}</span>
+                      </div>
+                    </div>
+                    <div className="db-regrow__actions">
+                      <Button variant="secondary" size="sm" onClick={() => router.push(`/events/${ev.id}`)}>
+                        <Icon name="eye" size={15} /> View event
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleUnsave(ev.id)}>
+                        <Icon name="heart-solid" size={15} /> Unsave
+                      </Button>
+                    </div>
+                  </div>
                 ))}
               </div>
             )
@@ -211,6 +241,62 @@ export default function EventeeDashboard() {
               <div className="db-empty">
                 You haven&apos;t registered for any events yet.{" "}
                 <a href="/" style={{ color: "var(--brand)", fontWeight: 600 }}>Find one you&apos;ll love.</a>
+              </div>
+            ) : view === "grid" ? (
+              <div className="db-grid">
+                {tickets.map(t => {
+                  const ev = t.events;
+                  const paid = t.status === "paid";
+                  return (
+                    <div
+                      key={t.id}
+                      style={{
+                        background: "var(--surface)", border: "2px solid var(--border-strong)",
+                        borderRadius: "var(--radius-lg)", boxShadow: "var(--stack-1-lg)",
+                        padding: 18, display: "flex", flexDirection: "column", gap: 12,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                        <div className="db-datechip">
+                          <span className="m">{ev?.starts_at ? month(ev.starts_at) : "TBD"}</span>
+                          <span className="d">{ev?.starts_at ? day(ev.starts_at) : "?"}</span>
+                        </div>
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          fontFamily: "var(--font-mono)", fontSize: "var(--fs-xs)",
+                          textTransform: "uppercase", letterSpacing: "0.06em",
+                          padding: "3px 10px", borderRadius: "var(--radius-pill)",
+                          background: paid ? "var(--success-bg)" : "var(--warning-bg)",
+                          border: `1px solid ${paid ? "var(--success-bd)" : "var(--warning-bd)"}`,
+                          color: paid ? "var(--success)" : "var(--warning)",
+                        }}>
+                          {paid ? "Secured" : "Unpaid"}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="db-reg__title">{ev?.title ?? "Event"}</div>
+                        <div className="db-reg__meta" style={{ marginTop: 6 }}>
+                          {ev?.starts_at && <span><Icon name="calendar-days" size={14} />{fmtWhen(ev.starts_at)}</span>}
+                          {ev?.location && <span><Icon name="map-pin" size={14} />{ev.location}</span>}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, marginTop: "auto", flexWrap: "wrap" }}>
+                        {paid ? (
+                          <Button variant="secondary" size="sm" onClick={() => { setTab("tix"); setQrOpen(t); }}>
+                            <Icon name="qr-code" size={15} /> View ticket
+                          </Button>
+                        ) : (
+                          <Button size="sm" onClick={() => handleBuy(t)} disabled={payingId === t.id}>
+                            <Icon name="ticket" size={15} /> {payingId === t.id ? "Hold on..." : "Buy ticket"}
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => handleShare(t.event_id)}>
+                          <Icon name="share" size={15} /> Share
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="db-reg">
@@ -286,7 +372,7 @@ export default function EventeeDashboard() {
             paidTickets.length === 0 ? (
               <div className="db-empty">No paid tickets yet. Buy a ticket and your QR pass will live here.</div>
             ) : (
-              <div className="db-tix">
+              <div className="db-tix" style={view === "list" ? { gridTemplateColumns: "1fr" } : undefined}>
                 {paidTickets.map(t => {
                   const ev = t.events;
                   const scanned = !!t.qr_scanned_at;

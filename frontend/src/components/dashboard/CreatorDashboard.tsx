@@ -10,6 +10,7 @@ import Icon from "@/components/Icon";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
 import ShareModal from "@/components/ShareModal";
+import ViewToggle, { type ViewMode } from "@/components/ViewToggle";
 import DatePicker from "@/components/DatePicker";
 import TimePicker from "@/components/TimePicker";
 import {
@@ -59,6 +60,7 @@ export default function CreatorDashboard() {
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<EventBreakdownRow | null>(null);
   const [shareTarget, setShareTarget] = useState<EventBreakdownRow | null>(null);
+  const [view, setView] = useState<ViewMode>("list");
 
   const refresh = useCallback(() => {
     return Promise.all([apiGetAnalyticsOverview(), apiGetAnalyticsEvents()])
@@ -162,7 +164,58 @@ export default function CreatorDashboard() {
             <div className="cd-card" style={{ margin: "10px 0 18px" }}>
               <div className="cd-card__head">
                 <div><h2>Your events</h2><p>Sales and attendance per event. Pick one to spotlight it below.</p></div>
+                <ViewToggle view={view} onChange={setView} />
               </div>
+              {view === "grid" ? (
+              <div className="db-grid">
+                {rows.map(row => {
+                  const st = rowStatus(row);
+                  return (
+                    <div
+                      key={row.id}
+                      onClick={() => setSpotlightId(row.id)}
+                      style={{
+                        background: "var(--surface)", border: "2px solid var(--border-strong)",
+                        borderRadius: "var(--radius-lg)", boxShadow: "var(--stack-1)",
+                        padding: 18, display: "flex", flexDirection: "column", gap: 12, cursor: "pointer",
+                        transition: "box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out)",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--stack-2)"; e.currentTarget.style.borderColor = "var(--brand)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.boxShadow = "var(--stack-1)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                        <div className="cd-ev__chip"><span className="m">{month(row.starts_at)}</span><span className="d">{day(row.starts_at)}</span></div>
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          fontFamily: "var(--font-mono)", fontSize: "var(--fs-xs)",
+                          textTransform: "uppercase", letterSpacing: "0.06em",
+                          padding: "3px 10px", borderRadius: "var(--radius-pill)",
+                          background: st.bg, border: `1px solid ${st.bd}`, color: st.fg,
+                        }}>
+                          <span style={{ width: 7, height: 7, transform: "rotate(45deg)", background: "currentColor", borderRadius: 1.5, flexShrink: 0 }} />
+                          {st.label}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="cd-ev__name">{row.title}</div>
+                        <div className="cd-ev__sub">{row.location}</div>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", fontSize: "var(--fs-sm)", color: "var(--text-muted)" }}>
+                        <span><span className="cd-num">{row.tickets_sold.toLocaleString()}</span> / {row.capacity ? row.capacity.toLocaleString() : "open"} sold</span>
+                        <span><span className="cd-num">{row.attendance_rate}%</span> attendance</span>
+                        <span className="cd-num">{nairaCompact(row.revenue)}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, marginTop: "auto" }} onClick={e => e.stopPropagation()}>
+                        <IconAction label="View event" icon="eye" onClick={() => router.push(`/events/${row.id}`)} />
+                        <IconAction label="Share event" icon="share" onClick={() => setShareTarget(row)} />
+                        <IconAction label="Edit event" icon="pencil-square" onClick={() => setEditTarget(row)} />
+                        <IconAction label="Delete event" icon="trash" danger onClick={() => handleDelete(row)} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              ) : (
               <table className="cd-table">
                 <thead>
                   <tr>
@@ -228,6 +281,7 @@ export default function CreatorDashboard() {
                   })}
                 </tbody>
               </table>
+              )}
             </div>
 
             {/* Revenue + sales mix */}

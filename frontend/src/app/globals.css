@@ -528,6 +528,9 @@ a { color: inherit; text-decoration: none; }
 .db-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
 
 /* Creator dashboard */
+.cd-period { display: inline-flex; gap: 4px; padding: 5px; border-radius: var(--radius-pill); background: var(--surface-tint); border: 1.5px solid var(--border); }
+.cd-period button { font-size: var(--fs-sm); font-weight: 600; padding: 8px 16px; border-radius: var(--radius-pill); border: none; background: transparent; color: var(--text-muted); cursor: pointer; transition: all var(--dur-base); }
+.cd-period button.is-on { background: var(--surface); color: var(--text-strong); border: 1.5px solid var(--border-strong); box-shadow: 2px 2px 0 var(--shadow-edge); }
 
 .cd-card { background: var(--surface); border: var(--bw-edge) solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--stack-1-lg); padding: 24px; }
 .cd-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 20px; }
