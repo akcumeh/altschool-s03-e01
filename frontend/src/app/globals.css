@@ -513,6 +513,8 @@ a { color: inherit; text-decoration: none; }
   /* Auth split collapses to single column; hide brand panel */
   [data-auth-split] { grid-template-columns: 1fr !important; }
   [data-auth-brand] { display: none !important; }
+  /* Event detail two-column collapses */
+  [data-event-grid] { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 640px) {
@@ -542,6 +544,10 @@ a { color: inherit; text-decoration: none; }
     margin: 0 auto;
   }
 
+  /* Event detail: disable sticky on ticket widget ---- */
+  [data-event-grid] > *:last-child {
+    position: static !important;
+  }
 }
 
 /* ----------------------------------------------------------------
